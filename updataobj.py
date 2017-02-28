@@ -24,6 +24,8 @@ class UpdataObj():
         self.sqldat = {}
         self.netdat = {}
 
+        self.sqldatedic = {}
+
         self.SZDat = None
 
         self.initAllSQLType()
@@ -34,16 +36,17 @@ class UpdataObj():
             if outdat:
                 self.sqldat[outdat[2]] = [outdat[0],outdat[1]]
                 sqldatetmp = self.conventStrDateToNumber(str(outdat[1]))
-                if sqldatetmp > self.lastUpdate:
-                    self.lastUpdate = sqldatetmp    #更新mysql最后一次更新数据时间
-                if i == '000099':
-                    break
+                self.sqldatedic[i] = sqldatetmp
             else:
                 print 'initAllSQLTypeErro:%s'%(i)
             time.sleep(0.001)    #延时10毫秒进行下个数据请求
         todaynumdate = self.getNowNumberDate()
         print self.lastUpdate
         print todaynumdate
+        datesx = list(self.sqldatedic.values())
+        datesx.sort()
+        mindate = datesx[0]
+        self.lastUpdate = mindate                   #取得数据库中日期最早的一个数据日期
         if todaynumdate > self.lastUpdate:          #当当前日期比数据库晚一天以上时，获取当天股票网络数据
             self.updateAllNetDataToSQL()
             
@@ -69,12 +72,16 @@ class UpdataObj():
             else:  
                 # reraise the original error  
                 raise
-
+    def setLastUpdate(self):
+        datesx = list(self.sqldatedic.values())
+        datesx.sort()
+        self.lastUpdate = datesx[0]
     #获取所有网络股票数据
     def updateAllNetDataToSQL(self):
         self.initSZNetData()    #获取当前最新行情日期
         todaynumdate = self.getNowNumberDate()
         if self.lastNetDate > self.lastUpdate:    #如果网络数据比数据库新,则下载最新数据
+            print '查看是否有新数据'
             if todaynumdate > self.lastNetDate:     #如果网络数据为昨天以前数据,则直接下载,比如星期六和星期天直接下载上周数据
                 self.updateNetDataWithDate(self.lastUpdate,self.lastNetDate)
             elif todaynumdate == self.lastNetDate and self.getNowHour() >= 18:  #如果网络数据为今天数据，则看当前时间是否在下午6点以后
@@ -98,28 +105,35 @@ class UpdataObj():
             if len(l) < 2:  #删除最后个空行
                 continue
             dtmps = l.split(',')
+            dtmps[2] = 'cnName'
             prices.append(dtmps)
         tmp = list(reversed(prices))
         return tmp[:-1]
     def updateAllNetDataWithDate(self,startdate,enddate):
         erroids = []
         for d in self.idDic.keys():
-            tidcsvdats = self.getNetDataWithDate(startdate, enddate, d)
+            if self.sqldatedic[d] >= enddate:
+                print '%s已经是最新数据'%(d)
+                continue
+            tidcsvdats = self.getNetDataWithDate(self.sqldatedic[d], enddate, d)
             csvdats = self.getPriceList(tidcsvdats)[1:] #删除第一行的开始日期时间,以防止与服务器重复
-            print self.sqldat
             sqlback = self.mysqltool.addCSVDataToSql(d, csvdats,self.idDic[d][1],self.sqldat)
             if sqlback > 100:
                 print sqlback
                 print 'erro ID:' + str(d)
                 erroids.append(d)
                 continue
+            self.sqldatedic[d] = enddate
             print str(d) + '编号股票所有数据据更新完成'
+        print '更新当天数据完成'
+        self.setLastUpdate()
+        self.lastUpdateNetTime = self.getNowNumberDate()
+        self.lastNetDate = enddate
         return erroids
 
     def getNetDataWithDate(self,startdate, enddate,codeid):
         try:  
             urlstr = ""
-            print codeid
             if codeid[0] == '6':
                 #http://quotes.money.163.com/service/chddata.html?code=1000001&start=20170220&end=20170222
                 urlstr = "http://quotes.money.163.com/service/chddata.html?code=0"+ codeid +"&start="+ str(startdate) +"&end=" + str(enddate)
@@ -130,9 +144,9 @@ class UpdataObj():
             # restr.add_header('Range', 'bytes=0-20')
             resque = urllib2.urlopen(req) 
             datatmp = resque.read()
-            cnstrtype = chardet.detect(datatmp)['encoding']
-            utf8str =  datatmp.decode(cnstrtype).encode('utf-8')
-            utf8str = utf8str.replace('\r','')
+            # cnstrtype = chardet.detect(datatmp)['encoding']
+            # utf8str =  datatmp.decode(cnstrtype).encode('utf-8')
+            utf8str = datatmp.replace('\r','')
             utf8dats = utf8str.split('\n')
             return utf8dats
         except urllib2.URLError, e:  
@@ -329,24 +343,12 @@ class UpdataObj():
 if __name__ == '__main__':
     mysqltool = MySqlTool.MySqlTool()
     updataobjtmp = UpdataObj(mysqltool)
-    # idstmp = ['000001','000002']
-    # outdic = updataobjtmp.getNetDatas(idstmp)
-    # scsdat = updataobjtmp.conventOutDicToCSVTypeDat(outdic)
-    # print scsdat
-    # sqlback = mysqltool.addOneLineTab(scsdat, '')
-    #----
-    # sqlback = updataobjtmp.getSqlLastData('000001')
-    # print str(sqlback[1])
-    # print sqlback
-    #----
-    # datas = updataobjtmp.getNetDataWithDate(20170220, 20170228, '000001')
-    # print datas
-    #//
-    # datas = updataobjtmp.updateAllNetDataWithDate(20170220, 20170228)
-    # if datas:
-    #     print '下边数据更新出错'
-    #     print datas
     print '数据更新完成'
+    while True:
+        time.sleep(3600)    #延时1小时
+        updataobjtmp.setLastUpdate()
+        updataobjtmp.updateAllNetDataToSQL()
+
 #计算相差天数
 # import datetime
 # d1 = datetime.datetime(2005, 2, 16)

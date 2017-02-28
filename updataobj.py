@@ -114,7 +114,6 @@ class UpdataObj():
                 erroids.append(d)
                 continue
             print str(d) + '编号股票所有数据据更新完成'
-            return '测试返回'
         return erroids
 
     def getNetDataWithDate(self,startdate, enddate,codeid):

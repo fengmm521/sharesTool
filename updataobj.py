@@ -337,7 +337,7 @@ class UpdataObj():
             #日期 股票代码    名称  收盘价 最高价 最低价 开盘价 前收盘         涨跌额     涨跌幅     换手率     成交量     成交金额    总市值 流通市值    成交笔数
             #time k          k.   price high. low.   open. yestclose    updown     percent   0        volume     turnover.  0     0.         0
             outtmp[k] = "'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'"%(str(datetmp),k,self.idDic[k][1],str(dicdat[k]['price']),str(dicdat[k]['high']),str(dicdat[k]['low']),str(dicdat[k]['open']),str(dicdat[k]['yestclose']),str(dicdat[k]['updown']),str(dicdat[k]['percent']),str(int(dicdat[k]['volume'])/10000),str(int(dicdat[k]['turnover'])/10000))
-        return outtmp,str(dicdat[k]['yestclose'])
+        return outtmp,str(dicdat[k]['price'])
 
 #测试
 if __name__ == '__main__':

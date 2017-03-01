@@ -15,7 +15,7 @@ BEGIN
     -- select id into maxid from text where id=(select max(id) from text);
     
     WHILE @minid < @maxid DO   
-        SET @STMT :=CONCAT("SELECT fclose into @findFClose from `",tabname,"` where id=@minid+1;");   
+        SET @STMT :=CONCAT("SELECT close into @findFClose from `",tabname,"` where id=@minid+1;");   
         PREPARE STMT FROM @STMT;   
         EXECUTE STMT;
         SET @STMT :=CONCAT("update `",tabname,"` set tomorrow=@findFClose where id=@minid; ");   

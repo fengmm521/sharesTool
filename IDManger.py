@@ -82,7 +82,13 @@ def getAllIDs(isbackID = True):
 
 #测试
 if __name__ == '__main__':
-    print getAllIDs()
+    aids = getAllIDs()
+    outstr = ''
+    for d in aids:
+        outstr += "call updateTom('%s');\n"%(d)
+    f = open('updateother.sql','w')
+    f.write(outstr)
+    f.close()
 
 
 

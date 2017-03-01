@@ -10,7 +10,7 @@ sys.setdefaultencoding( "utf-8" )
 
 #提交数据到MySQL数据库
 class MySqlTool():
-    def __init__(self,addr = '127.0.0.1',port = 3306,usname = 'user',uspw = 'password',defDB = 'dat'):#root,7668150My00
+    def __init__(self,addr = '127.0.0.1',port = 3306,usname = 'root',uspw = 'password',defDB = 'data'):#root,7668150My00
         self.sqlobj = mysqlobj.mysqlobj(addr,port,usname,uspw,defDB)
         print '连接数据库'
     #创建所有股票数据表
@@ -148,7 +148,7 @@ class MySqlTool():
             if backstr <= 100: #插入数据正常,加入第二天数据更新
                 tmpsqlid = self.sqlobj.lastrowid
                 #UPDATE `shares_dat`.`000001` SET `tomorrow`='99' WHERE `id`='4145' and`date`='2017-02-20';
-                sqlcmd = "UPDATE `shares_dat`.`%s` SET `tomorrow`='%s' WHERE `id`='%s';"%(tabID,str(listtmp[7]),str(lastsqldic[tabID][0]))
+                sqlcmd = "UPDATE `shares_dat`.`%s` SET `tomorrow`='%s' WHERE `id`='%s';"%(tabID,str(listtmp[3]),str(lastsqldic[tabID][0]))
                 self.sqlobj.execute(sqlcmd)
                 lastsqldic[tabID][0] = tmpsqlid
             lastsqldic[tabID][1] = listtmp[0]

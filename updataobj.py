@@ -11,6 +11,7 @@ import MySqlTool
 import urllib2
 import json
 import socket
+import selectSharesLow
 
 class UpdataObj():
     """docstring for UpdataObj"""
@@ -20,6 +21,7 @@ class UpdataObj():
         self.lastUpdateNetTime = 20001010                         #上次更新行情数据时间
         self.idDic = IDManger.getAllIDs(False)                    #所有股票数据ID,中文名以及所在行业名字典
         self.mysqltool = mysqltool                                #mysql操作对象
+        self.selectObj = selectSharesLow.SharesSelectObj(mysqltool)
 
         self.sqldat = {}
         self.netdat = {}
@@ -89,15 +91,20 @@ class UpdataObj():
             else:
                 self.lastUpdateNetTime = todaynumdate
 
+        time.sleep(30)                                      #数据下载完成后，等30秒后开始分析数据
+        self.selectObj.getLastDatFromSql()                  #分析数据
+
     def updateNetDataWithDate(self,startdate,enddate):     #通过开始日期与结束日期获取行情数据
         if enddate - startdate  == 1:    #使用直接http请求当前最新json数据,并存入数据库
             self.updateAllIDDataForToday(enddate)
         else:                            #时间大于1天，则请求多天的csv数据,并存入数据库
             erros = self.updateAllNetDataWithDate(startdate, enddate)
             if erros:
+                isSelectCanRun = False
                 print '更新数据错误:'
                 print erros
-
+            
+        
     #csv行数据得到可用数据
     def getPriceList(self,datlines):
         prices = []
@@ -231,9 +238,9 @@ class UpdataObj():
     #更新当天所有股票数据的json格式，并存入数据库
     def updateAllIDDataForToday(self,enddate):
         outdic = self.getNetDatas(self.idDic.keys())
-        scsdat,fclosed = updataobjtmp.conventOutDicToCSVTypeDat(outdic)
+        scsdat,closeddic = updataobjtmp.conventOutDicToCSVTypeDat(outdic)
         laststrdate = self.conventNumberToStrDate(self.lastUpdate)
-        sqlback = mysqltool.addOneLineTab(scsdat, self.idDic,fclosed,laststrdate)
+        sqlback = mysqltool.addOneLineTab(scsdat, self.idDic,closeddic,laststrdate)
         if sqlback < 100:
             print '更新当天数据完成'
             self.lastUpdate = enddate
@@ -242,6 +249,12 @@ class UpdataObj():
         else:
             print '更新当天数据出错'
             
+    def getNetIDSWithList(self,tlist):
+        outstr = ''
+        for nd in tlist:
+            outstr += nd + '%'+'2c'
+        return outstr
+
     def getNetDatas(self,ids):
         nids = []
         for td in ids:
@@ -264,10 +277,11 @@ class UpdataObj():
             strnid = ''
             for nd in nids:
                 strnid += nd + '%'+'2c'
-            cmdnids.append(strnid)
+            cmdnids.append([strnid])
 
-        for cid in cmdnids:
+        for tid in cmdnids:
             try:  
+                cid = self.getNetIDSWithList(tid)
                 urlstr = "http://api.money.126.net/data/feed/%smoney.api"%(cid)
                 print urlstr
                 req = urllib2.Request(urlstr)  
@@ -332,12 +346,14 @@ class UpdataObj():
         return outstr
     def conventOutDicToCSVTypeDat(self,dicdat):             #将网络请求返回数据转为要存入数据库的数据
         outtmp = {}
+        outprice = {}
         for k in dicdat.keys():
             datetmp = self.getDateFromNetDat(dicdat[k]['time'])
             #日期 股票代码    名称  收盘价 最高价 最低价 开盘价 前收盘         涨跌额     涨跌幅     换手率     成交量     成交金额    总市值 流通市值    成交笔数
             #time k          k.   price high. low.   open. yestclose    updown     percent   0        volume     turnover.  0     0.         0
             outtmp[k] = "'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'"%(str(datetmp),k,self.idDic[k][1],str(dicdat[k]['price']),str(dicdat[k]['high']),str(dicdat[k]['low']),str(dicdat[k]['open']),str(dicdat[k]['yestclose']),str(dicdat[k]['updown']),str(dicdat[k]['percent']),str(int(dicdat[k]['volume'])/10000),str(int(dicdat[k]['turnover'])/10000))
-        return outtmp,str(dicdat[k]['price'])
+            outprice[k] = str(dicdat[k]['price'])
+        return outtmp,outprice
 
 #测试
 if __name__ == '__main__':
@@ -345,7 +361,7 @@ if __name__ == '__main__':
     updataobjtmp = UpdataObj(mysqltool)
     print '数据更新完成'
     while True:
-        time.sleep(3600)    #延时1小时
+        time.sleep(3500)    #延时1小时
         updataobjtmp.setLastUpdate()
         updataobjtmp.updateAllNetDataToSQL()
 

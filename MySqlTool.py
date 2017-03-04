@@ -11,7 +11,7 @@ sys.setdefaultencoding( "utf-8" )
 
 #提交数据到MySQL数据库
 class MySqlTool():
-    def __init__(self,addr = '127.0.0.1',port = 3306,usname = 'root',uspw = 'pqssword',defDB = 'test'):#root,7668150My00
+    def __init__(self,addr = '127.0.0.1',port = 3306,usname = 'root',uspw = 'pqssword',defDB = 'test'):#root,abc7668150My00321
         self.sqlobj = mysqlobj.mysqlobj(addr,port,usname,uspw,defDB)
         print '连接数据库'
     #创建所有股票数据表

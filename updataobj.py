@@ -120,7 +120,6 @@ class UpdataObj():
         erroids = []
         for d in self.idDic.keys():
             if self.sqldatedic[d] >= enddate:
-                print '%s已经是最新数据'%(d)
                 continue
             tidcsvdats = self.getNetDataWithDate(self.sqldatedic[d], enddate, d)
             csvdats = self.getPriceList(tidcsvdats)[1:] #删除第一行的开始日期时间,以防止与服务器重复

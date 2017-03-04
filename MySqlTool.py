@@ -11,7 +11,7 @@ sys.setdefaultencoding( "utf-8" )
 
 #提交数据到MySQL数据库
 class MySqlTool():
-    def __init__(self,addr = '127.0.0.1',port = 3306,usname = 'root',uspw = 'password',defDB = 'test'):#root,7668150My00
+    def __init__(self,addr = '127.0.0.1',port = 3306,usname = 'root',uspw = 'pqssword',defDB = 'test'):#root,7668150My00
         self.sqlobj = mysqlobj.mysqlobj(addr,port,usname,uspw,defDB)
         print '连接数据库'
     #创建所有股票数据表
@@ -88,7 +88,6 @@ class MySqlTool():
     #获取最近一定数量的所有股票数据
     def getTabDataWithIDAndCount(self,tid,tcount):
         sqlcmd = "SELECT * FROM shares_dat.`%s` ORDER BY id DESC limit %d;"%(tid,tcount)
-        print sqlcmd
         backstr = self.sqlobj.execute(sqlcmd)
         if backstr > 0 and backstr <= tcount:
             return self.sqlobj.getAllDat()
@@ -98,9 +97,7 @@ class MySqlTool():
     #取一个最近的推荐数据
     def getLastSelectTabData(self):
         sqlcmd = "SELECT * FROM shares_dat.everydayshare ORDER BY id DESC limit 1;"
-        print sqlcmd
         backstr = self.sqlobj.execute(sqlcmd)
-        print backstr
         if backstr > 0:
             return self.sqlobj.getAllDat()
         else:

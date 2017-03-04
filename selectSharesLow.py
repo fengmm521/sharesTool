@@ -46,7 +46,7 @@ class SharesSelectObj():
 		self.nowLowNumber = 0			#当前分析股票的最近最小值在3000日数据数组中的编号
 
 		#今天分析的所有股票数据结果								#[距离今天的时间比,价格最低值比,最近的最低价,最近最低价离今天的日子]
-		self.today3000s = {}								#今日分析的所有股票3000日数据结果,分别是,距离今天的时间比,价格最低值比,最近的最低价,价格改变率,最近最低价离今天的日子
+		self.today3000s = {}			#今日分析的所有股票3000日数据结果,分别是,距离今天的时间比,价格最低值比,最近的最低价,价格改变率,最近最低价离今天的日子
 		self.today1000s = {}								#今日分析的所有股票1000日数据结果
 		self.today600s = {}									# 	...
 		self.today300s = {}									#	...
@@ -60,7 +60,6 @@ class SharesSelectObj():
 	def getLastDatFromSql(self):
 		self.lastUpdate = DateTool.getNowStrDate()
 		dat = self.sqltool.getLastSelectTabData()
-		print dat
 		if dat:
 			self.lastSelectDate = DateTool.conventStrDateToNumber(str(dat[0][1]))
 			numLastUpdate = DateTool.conventStrDateToNumber(self.lastUpdate)
@@ -89,7 +88,7 @@ class SharesSelectObj():
 	    sendtext += '150日推荐:\n'
 	    for x150 in self.selOutDic[150]:
 	    	sendtext += str(x150) + '\n'
-	    my.send(tag,sendtext)  
+	    self.mailtool.send(tag,sendtext)  
 
 	#开始分析数据
 	def startTodayAnalyse(self):

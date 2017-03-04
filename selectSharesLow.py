@@ -17,6 +17,7 @@ import IDManger
 import MySqlTool
 import json
 import DateTool
+import mailTool
 
 #将所有Excel文件转为xml文件
 reload(sys)
@@ -28,6 +29,8 @@ class SharesSelectObj():
 	def __init__(self, mysqltool):
 		self.sqltool = mysqltool 						#用于向数据库请求和保存数据
 		self.allIDs = IDManger.getAllIDs()				#所有股票ID
+
+		self.mailtool = mailTool.MyEmail()
 
 		#将要保存到数据库的最终结果
 		self.count3000 = 0
@@ -67,6 +70,27 @@ class SharesSelectObj():
 			self.startTodayAnalyse()
 			self.lastSelectDate = DateTool.conventStrDateToNumber(self.lastUpdate)
 
+
+	#发送推荐股票邮件
+	def sendEmailToUser(self):
+	    tag = "%s股票推荐"%(self.lastUpdate)  
+	    sendtext = '3000日推存:\n'
+	    for x3000 in self.selOutDic[3000]:
+	    	sendtext += str(x3000) + '\n'
+	    sendtext += '1000日推存:\n'
+	    for x1000 in self.selOutDic[1000]:
+	    	sendtext += str(x1000) + '\n'
+	    sendtext += '600日推荐:\n'
+	    for x600 in self.selOutDic[600]:
+	    	sendtext += str(x600) + '\n'
+	    sendtext += '300日推荐:\n'
+	    for x300 in self.selOutDic[300]:
+	    	sendtext += str(x300) + '\n'
+	    sendtext += '150日推荐:\n'
+	    for x150 in self.selOutDic[150]:
+	    	sendtext += str(x150) + '\n'
+	    my.send(tag,sendtext)  
+
 	#开始分析数据
 	def startTodayAnalyse(self):
 		self.lastUpdate = DateTool.getNowStrDate()
@@ -74,6 +98,7 @@ class SharesSelectObj():
 			self.analyOneShares(d)
 			time.sleep(0.001)
 		self.getAllRecommendDat()
+		self.sendEmailToUser()
 	def analyOneShares(self,tid):
 		if self.lastUpdate == '':
 			self.lastUpdate = DateTool.getNowStrDate()
@@ -110,34 +135,64 @@ class SharesSelectObj():
 		self.today3000s[self.nowTID] = xielvs3000[-1]
 		if self.count3000 >= 1000:
 			xielvs1000 = self.getMinPrice(avedats[-1000:])
-			self.today1000s[self.nowTID] = xielvs1000[-1]
+			if xielvs1000:
+				self.today1000s[self.nowTID] = xielvs1000[-1]
+			else:
+				self.today1000s[self.nowTID] = xielvs3000[-1]
 			xielvs600 = self.getMinPrice(avedats[-600:])
-			self.today600s[self.nowTID] = xielvs600[-1]
+			if xielvs600:
+				self.today600s[self.nowTID] = xielvs600[-1]
+			else:
+				self.today600s[self.nowTID] = xielvs3000[-1]
 			xielvs300 = self.getMinPrice(avedats[-300:])
-			self.today300s[self.nowTID] = xielvs300[-1]
+			if xielvs300:
+				self.today300s[self.nowTID] = xielvs300[-1]
+			else:
+				self.today300s[self.nowTID] = xielvs3000[-1]
 			xielvs150 = self.getMinPrice(avedats[-150:])
-			self.today150s[self.nowTID] = xielvs150[-1]
+			if xielvs150:
+				self.today150s[self.nowTID] = xielvs150[-1]
+			else:
+				self.today150s[self.nowTID] = xielvs3000[-1]
 		else:
 			self.today1000s[self.nowTID] = xielvs3000[-1]
 			if self.count3000 >= 600:
 				xielvs600 = self.getMinPrice(avedats[-600:])
-				self.today600s[self.nowTID] = xielvs600[-1]
+				if xielvs600:
+					self.today600s[self.nowTID] = xielvs600[-1]
+				else:
+					self.today600s[self.nowTID] = xielvs3000[-1]
 				xielvs300 = self.getMinPrice(avedats[-300:])
-				self.today300s[self.nowTID] = xielvs300[-1]
+				if xielvs300:
+					self.today300s[self.nowTID] = xielvs300[-1]
+				else:
+					self.today300s[self.nowTID] = xielvs3000[-1]
 				xielvs150 = self.getMinPrice(avedats[-150:])
-				self.today150s[self.nowTID] = xielvs150[-1]
+				if xielvs150:
+					self.today150s[self.nowTID] = xielvs150[-1]
+				else:
+					self.today150s[self.nowTID] = xielvs3000[-1]
 			else:
 				self.today600s[self.nowTID] = xielvs3000[-1]
 				if self.count3000 >= 300:
 					xielvs300 = self.getMinPrice(avedats[-300:])
-					self.today300s[self.nowTID] = xielvs300[-1]
+					if xielvs300:
+						self.today300s[self.nowTID] = xielvs300[-1]
+					else:
+						self.today300s[self.nowTID] = xielvs3000[-1]
 					xielvs150 = self.getMinPrice(avedats[-150:])
-					self.today150s[self.nowTID] = xielvs150[-1]
+					if xielvs150:
+						self.today150s[self.nowTID] = xielvs150[-1]
+					else:
+						self.today150s[self.nowTID] = xielvs3000[-1]
 				else:
 					self.today300s[self.nowTID] = xielvs3000[-1]
 					if self.count3000 >= 150:
 						xielvs150 = self.getMinPrice(avedats[-150:])
-						self.today150s[self.nowTID] = xielvs150[-1]
+						if xielvs150:
+							self.today150s[self.nowTID] = xielvs150[-1]
+						else:
+							self.today150s[self.nowTID] = xielvs3000[-1]
 					else:
 						self.today150s[self.nowTID] = xielvs3000[-1]
 		self.saveOneShareResultToSql(self.nowTID)
@@ -183,7 +238,7 @@ class SharesSelectObj():
 		pricelist = list(datas)
 		pricelist.sort(key=lambda x:x[2]) 
 		priceListtmp = []
-		for mind in mindatlist:
+		for mind in pricelist:
 			if mind[1] <= maxDate and mind[2] <= minPrice:
 				priceListtmp.append(mind)
 		return priceListtmp
@@ -273,6 +328,8 @@ class SharesSelectObj():
 				dattmps.append(tmpd)
 			else:
 				zoredats.append(d)
+		if not dattmps:
+			return []
 		maxdat = max(dattmps)
 		mindat = min(dattmps)
 		xielv = []

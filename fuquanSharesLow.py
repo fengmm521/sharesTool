@@ -18,14 +18,16 @@ import MySqlTool
 import json
 import DateTool
 import mailTool
-import fuquanSharesLow
 
 #将所有Excel文件转为xml文件
 reload(sys)
 sys.setdefaultencoding( "utf-8" )
 
+#后复权数据下载接口
+#http://img1.money.126.net/data/hs/klinederc/day/times/1002095.json
 
-class SharesSelectObj():
+
+class SharesFQSelectObj():
     """docstring for SharesSelectObj"""
     def __init__(self, mysqltool):
         self.sqltool = mysqltool                        #用于向数据库请求和保存数据
@@ -33,19 +35,17 @@ class SharesSelectObj():
 
         self.mailtool = mailTool.MyEmail()
 
-        #复权数据工具
-        self.fqObjTool = fuquanSharesLow.SharesFQSelectObj(self.mailtool)
-
         #将要保存到数据库的最终结果
         self.count3000 = 0
         self.selOutDic = {}             #找出的3000日价位推存股票，找出的3000日距推存股票{pp:[],dp:[]},pp,dp分别满足要求的10支股票
+        self.nowPrices = []             #当前股票价格
+        self.sharesStartDate = ''       #股票发行日期
+        self.sharesDataEndDay = ''      #股票当前前复权数据日期
 
         #当前正在分析的股票数据
         self.nowTID = ''                #当前正在分析的股票代码
-        self.nowDat = []                #当前正在分析的股票按日期从早到晚排序的数据
-        self.nowPrices = []             #重数据中取出当天的分析参考价格
-        self.nowHighPrices = []         #所有当天最高价
-        self.nowLowPrices = []          #所有当天最低价
+        self.nowdic = {}                #当前分析数据字典,按日期保存的当日价格
+        self.fqNowprice = 0.0           #当前不复权最近成交价格
 
         self.min3000 = 0                #当前分析股票的3000日历史最少值
         self.max3000 = 0                #当前分析股票的3000日历史最大值
@@ -68,7 +68,9 @@ class SharesSelectObj():
 
         self.lastUpdate = ''            #服务器最新分析数据日期
         self.lastSelectDate = 20000101  #获取服务器推荐保存数据
-        self.lastUpdateHour = 0         #最后更新日期的小时数
+
+    def setTodayPrice(self,price):
+        self.todayPrice = price
 
     def initConf(self):
         f = open(self.confilePth,'r')
@@ -81,23 +83,18 @@ class SharesSelectObj():
         self.conf300 = tmplines[4].split(',')[1:]
         self.conf150 = tmplines[5].split(',')[1:]
 
-    #从数据库中查找最近一次的分析日期,如果最近的分析日期在昨天，则开始新的分析,否则把读取到的数据存入变量
-    def getLastDatFromSql(self,isMust = False):    #是否强制分析数据
-        self.lastUpdate = DateTool.getNowStrDate()
-        dat = self.sqltool.getLastSelectTabData()
-        if dat:
-            self.lastSelectDate = DateTool.conventStrDateToNumber(str(dat[0][1]))
-            numLastUpdate = DateTool.conventStrDateToNumber(self.lastUpdate)
-            nowhour = DateTool.getNowHour()
-            if numLastUpdate > self.lastSelectDate and self.lastUpdateHour < 18:
-                self.startTodayAnalyse()
-            #当数据库数据日期等于今天日期,且上次更新时间在18点前,并且当前时间在18点后,分析数据
-            elif numLastUpdate == self.lastSelectDate and self.lastUpdateHour < 18 and nowhour >= 18:
-                self.startTodayAnalyse()
-
-        else:
-            self.startTodayAnalyse()
-            self.lastSelectDate = DateTool.conventStrDateToNumber(self.lastUpdate)
+    #从数据库中查找最近一次的分析日期,如果最近的分析日期在昨天，则开始新的分析,否则把读取到的数据存入变量,复权数据库名:fuquaneverydayshare
+    # def getLastDatFromSql(self):
+    #     self.lastUpdate = DateTool.getNowStrDate()
+    #     dat = self.sqltool.getLastSelectTabData()
+    #     if dat:
+    #         self.lastSelectDate = DateTool.conventStrDateToNumber(str(dat[0][1]))
+    #         numLastUpdate = DateTool.conventStrDateToNumber(self.lastUpdate)
+    #         if numLastUpdate > self.lastSelectDate:
+    #             self.startTodayAnalyse()
+    #     else:
+    #         self.startTodayAnalyse()
+    #         self.lastSelectDate = DateTool.conventStrDateToNumber(self.lastUpdate)
 
 
     def getStringForMail(self,dats):
@@ -106,95 +103,112 @@ class SharesSelectObj():
         return outstr
 
     #发送推荐股票邮件
-    def sendEmailToUser(self,fqEmailDat):
-        tag = "%s股票推荐"%(self.lastUpdate)  
-        sendtext = fqEmailDat
-        sendtext += '\n-------不复权数据分析结果---------\n'
-        sendtext += '3000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+    def getEmailWithFQDataStr(self):
+        sendtext = '-------前复权数据分析结果---------\n'
+        sendtext += '复权3000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x3000 in self.selOutDic[3000]:
-            sendtext += self.getStringForMail(x3000) + '\n'
-        sendtext += '1000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x3000) + '\n\n'
+        sendtext += '复权1000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x1000 in self.selOutDic[1000]:
-            sendtext += self.getStringForMail(x1000) + '\n'
-        sendtext += '600日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x1000) + '\n\n'
+        sendtext += '复权600日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x600 in self.selOutDic[600]:
-            sendtext += self.getStringForMail(x600) + '\n'
-        sendtext += '300日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x600) + '\n\n'
+        sendtext += '复权300日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x300 in self.selOutDic[300]:
-            sendtext += self.getStringForMail(x300) + '\n'
-        sendtext += '150日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x300) + '\n\n'
+        sendtext += '复权150日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x150 in self.selOutDic[150]:
-            sendtext += self.getStringForMail(x150) + '\n'
-        self.mailtool.send(tag,sendtext)  
+            sendtext += self.getStringForMail(x150) + '\n\n'
+        return sendtext
 
-    #开始分析数据
-    def startTodayAnalyse(self):
-        self.lastUpdate = DateTool.getNowStrDate()
-        self.fqObjTool.lastUpdate = self.lastUpdate
-        for d in self.allIDs:
-            self.analyOneShares(d)
-            self.fqObjTool.setTodayPrice(self.todayPrice)   #分析前复权数据
-            self.fqObjTool.analyOneShares(d)
-            time.sleep(0.001)
-        self.getAllRecommendDat()
-        self.fqObjTool.getAllRecommendDat()                 #整理前复权数据分析结果
-        self.sendEmailToUser()
-        self.lastUpdateHour = DateTool.getNowHour()
+    # #开始分析数据
+    # def startTodayAnalyse(self):
+    #     self.lastUpdate = DateTool.getNowStrDate()
+    #     for d in self.allIDs:
+    #         self.analyOneShares(d)
+    #         time.sleep(0.001)
+    #     self.getAllRecommendDat()
+        #self.sendEmailToUser()
+
+    #析分某支股票数据
     def analyOneShares(self,tid):
         if self.lastUpdate == '':
             self.lastUpdate = DateTool.getNowStrDate()
-        self.getShareDatFromSql(tid)        #取出一支股票数据
+        self.getShareFQDatFromNet(tid)      #取出一支股票数据
         self.analyseShareDat()              #分析刚取出的股票数据
         return tid
 
-    #从数据库中取出一支股票的3000日数据数据
-    def getShareDatFromSql(self,tid,tcount = 3000):
-        #SELECT * FROM shares_dat.`000001` ORDER BY id DESC limit 3000; #降序查寻某个数据的前3000项
-        datback = self.sqltool.getTabDataWithIDAndCount(tid, tcount)
-        self.nowDat = []
-        if datback:
-            for  t in datback:
-                self.nowDat.append(list(t))
-            self.nowDat.reverse()
-            self.nowTID = tid
-        else:
-            print '获取%s数据%d日错误'%(tid,tcount)
+    def getNetIDWithID(self,tid):
+        outid = ''
+        if tid[0] == '6':
+            outid = '0' + tid
+        elif tid[0] == '3' or tid[0] == '0':
+            outid = '1' + tid
+        return outid
+    #从网络获取复权数据
+    def getShareFQDatFromNet(self,tid):
+        #后复权数据下载接口
+        #http://img1.money.126.net/data/hs/klinederc/day/times/1002095.json
+        try:  
+            cid = self.getNetIDWithID(tid)
+            urlstr = "http://img1.money.126.net/data/hs/klinederc/day/times/%s.json"%(cid)
+            print urlstr
+            req = urllib2.Request(urlstr)  
+            # restr.add_header('Range', 'bytes=0-20')
+            resque = urllib2.urlopen(req) 
+            datatmp = resque.read()
+            #{"symbol":"002095","closes":[62.8,60.0,66.0,175.69],"times":["20061215","20061218","20170303"],"name":"\u751f \u610f \u5b9d"}
+            dicdat = json.loads(datatmp)
+            # outdic[codeid] = dicdat.values()[0]
+            print len(dicdat['closes'])
+            print len(dicdat['times'])
+            self.nowPrices = dicdat['closes']
+            self.sharesStartDate = dicdat['times'][0]
+            self.sharesDataEndDay = dicdat['times'][-1]
+        except urllib2.URLError, e:  
+            if isinstance(e.reason, socket.timeout):  
+                raise MyException("There was an error: %r" % e)  
+            else:  
+                # reraise the original error  
+                raise
+
+
+        # datback = self.sqltool.getTabDataWithIDAndCount(tid, tcount)
+        # self.nowDat = []
+        # if datback:
+        #   for  t in datback:
+        #       self.nowDat.append(list(t))
+        #   self.nowDat.reverse()
+        #   self.nowTID = tid
+        # else:
+        #   print '获取%s数据%d日错误'%(tid,tcount)
     #分析数据,得出分析结果并保存
     def analyseShareDat(self):
-        dattmps = []
-        self.count3000 = len(self.nowDat)
-        self.nowHighPrices = []         #所有当天最高价
-        self.nowLowPrices = []          #所有当天最低价
-        for d in self.nowDat:
-            # opentmp = d[7]
-            # closetmp = d[4],#high[5],#low[6]
-            tmpd = (float(d[7]) + float(d[4]))/2.0      #取开盘价与收盘价的中间值作为当天的分析价格
-            dattmps.append(tmpd)
-            self.nowHighPrices.append(d[5])             #最高价组
-            self.nowLowPrices.append(d[6])              #最低价组
-        self.nowPrices = dattmps
-        self.todayPrice = dattmps[-1]
+        dattmps = self.nowPrices
+        self.count3000 = len(self.nowPrices)
+        # self.todayPrice = dattmps[-1]
         #数据取向后的3平均值以取掉杂波
-        avedats = self.getAvDatas(dattmps, 3)           #将数据3天取一个平均值,得到一个数的数组
+        avedats = dattmps #self.getAvDatas(dattmps, 2)           #将数据2天取一个平均值,得到一个数的数组
         xielvs3000 = self.getMinPrice(avedats)
         self.today3000s[self.nowTID] = xielvs3000[-1]
         if self.count3000 >= 1000:
-            xielvs1000 = self.getMinPrice(avedats[-1000:],1000)
+            xielvs1000 = self.getMinPrice(avedats[-1000:])
             if xielvs1000:
                 self.today1000s[self.nowTID] = xielvs1000[-1]
             else:
                 self.today1000s[self.nowTID] = xielvs3000[-1]
-            xielvs600 = self.getMinPrice(avedats[-600:],600)
+            xielvs600 = self.getMinPrice(avedats[-600:])
             if xielvs600:
                 self.today600s[self.nowTID] = xielvs600[-1]
             else:
                 self.today600s[self.nowTID] = xielvs3000[-1]
-            xielvs300 = self.getMinPrice(avedats[-300:],300)
+            xielvs300 = self.getMinPrice(avedats[-300:])
             if xielvs300:
                 self.today300s[self.nowTID] = xielvs300[-1]
             else:
                 self.today300s[self.nowTID] = xielvs3000[-1]
-            xielvs150 = self.getMinPrice(avedats[-150:],150)
+            xielvs150 = self.getMinPrice(avedats[-150:])
             if xielvs150:
                 self.today150s[self.nowTID] = xielvs150[-1]
             else:
@@ -202,17 +216,17 @@ class SharesSelectObj():
         else:
             self.today1000s[self.nowTID] = xielvs3000[-1]
             if self.count3000 >= 600:
-                xielvs600 = self.getMinPrice(avedats[-600:],600)
+                xielvs600 = self.getMinPrice(avedats[-600:])
                 if xielvs600:
                     self.today600s[self.nowTID] = xielvs600[-1]
                 else:
                     self.today600s[self.nowTID] = xielvs3000[-1]
-                xielvs300 = self.getMinPrice(avedats[-300:],300)
+                xielvs300 = self.getMinPrice(avedats[-300:])
                 if xielvs300:
                     self.today300s[self.nowTID] = xielvs300[-1]
                 else:
                     self.today300s[self.nowTID] = xielvs3000[-1]
-                xielvs150 = self.getMinPrice(avedats[-150:],150)
+                xielvs150 = self.getMinPrice(avedats[-150:])
                 if xielvs150:
                     self.today150s[self.nowTID] = xielvs150[-1]
                 else:
@@ -220,12 +234,12 @@ class SharesSelectObj():
             else:
                 self.today600s[self.nowTID] = xielvs3000[-1]
                 if self.count3000 >= 300:
-                    xielvs300 = self.getMinPrice(avedats[-300:],300)
+                    xielvs300 = self.getMinPrice(avedats[-300:])
                     if xielvs300:
                         self.today300s[self.nowTID] = xielvs300[-1]
                     else:
                         self.today300s[self.nowTID] = xielvs3000[-1]
-                    xielvs150 = self.getMinPrice(avedats[-150:],150)
+                    xielvs150 = self.getMinPrice(avedats[-150:])
                     if xielvs150:
                         self.today150s[self.nowTID] = xielvs150[-1]
                     else:
@@ -233,7 +247,7 @@ class SharesSelectObj():
                 else:
                     self.today300s[self.nowTID] = xielvs3000[-1]
                     if self.count3000 >= 150:
-                        xielvs150 = self.getMinPrice(avedats[-150:],150)
+                        xielvs150 = self.getMinPrice(avedats[-150:])
                         if xielvs150:
                             self.today150s[self.nowTID] = xielvs150[-1]
                         else:
@@ -261,15 +275,15 @@ class SharesSelectObj():
 
         #self.initConf()    #通过文件初始化分类参数,目前没有运行
         self.selOutDic = {}
-        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.001,0.001)
-        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.001,0.001)
-        self.selOutDic[600] = self.findItemWithDat(ls600,0.001,0.001)
-        self.selOutDic[300] = self.findItemWithDat(ls300,0.001,0.001)
-        self.selOutDic[150] = self.findItemWithDat(ls150,0.001,0.001)
+        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.01,0.01)
+        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.01,0.01)
+        self.selOutDic[600] = self.findItemWithDat(ls600,0.01,0.01)
+        self.selOutDic[300] = self.findItemWithDat(ls300,0.01,0.01)
+        self.selOutDic[150] = self.findItemWithDat(ls150,0.01,0.01)
         self.saveAllAnalyseResultToSql()
     #保存当天分析结果的推荐股票数据存入数据库
     def saveAllAnalyseResultToSql(self):
-        self.sqltool.saveTodayAnalyseShareToSql(self.lastUpdate, self.selOutDic)
+        self.sqltool.saveTodayFQAnalyseShareToSql(self.lastUpdate, self.selOutDic)
 
     #找出想要的数据
     def findItemWithDat(self,datas,maxDate = 0.02,minPrice = 0.05):
@@ -286,7 +300,7 @@ class SharesSelectObj():
         priceListtmp = []
         for mind in pricelist:
             if mind[1] <= maxDate and mind[2] <= minPrice:
-                if mind[5] <= 3:            #只取最近3天满足要求的股票
+                if mind[5] <= 5:            #只取最近5天满足要求的股票
                     priceListtmp.append(mind)
         return priceListtmp
 
@@ -321,7 +335,7 @@ class SharesSelectObj():
         datatmps.append(self.today150s[tid][6]);    #minp150
         datatmps.append(self.today150s[tid][4]);    #between150
         print self.lastUpdate
-        backsql = self.sqltool.updateOneShareAnalyseDataToSql(tid, self.lastUpdate, datatmps)
+        backsql = self.sqltool.updateOneShareAnalyseFQDataToSql(tid, self.lastUpdate, datatmps)
         if backsql > 100:
             print '更新股票%s分析数据到数据库出错%d'%(tid,backsql)
         else:
@@ -345,21 +359,14 @@ class SharesSelectObj():
     def getAvDatas(self,dats,day):
         count = len(dats)
         tmpdats = []
-        tmpmin = 10000.0
-        tmpmax = 0.0
         for n in range(count):
             tmpd = 0.0
-            if dats[n] > 0:
-                if dats[n] < tmpmin:
-                    tmpmin = dats[n]
-                if dats[n] > tmpmax:
-                    tmpmax = dats[n]
             if n <= count - day:
                 tmpd = self.average(dats[n:n+day])
             else:
                 tmpd = self.average(dats[n:])
             tmpdats.append(tmpd)
-        return tmpdats,tmpmin,tmpmax
+        return tmpdats
 
     #数据平均法去杂波,取近day天数据的平均值作为当天的值，不完整数据在前边,目前默认设置为3天数据取平均值
     def getAvDatasFront(self,dats,day):
@@ -372,7 +379,7 @@ class SharesSelectObj():
         return tmpdats
 
     #获取数组中数值最小点位置
-    def getMinPrice(self,dats,tcount):
+    def getMinPrice(self,dats):
         count = len(dats)
         dattmps = []
         zoredats = []                   #数值为0的所有数据编号
@@ -384,13 +391,8 @@ class SharesSelectObj():
                 zoredats.append(d)
         if not dattmps:
             return []
-        maxdat = max(self.nowHighPrices[-tcount:])      #取当所有数据的最大值
-        mindat = 10000
-        #取所有数据的最小值
-        for dm in self.nowLowPrices[-tcount:]:
-            if dm < mindat:
-                mindat = dm
-
+        maxdat = max(dattmps)
+        mindat = min(dattmps)
         xielv = []
         if maxdat == mindat:
             return []
@@ -418,7 +420,8 @@ class SharesSelectObj():
 if __name__ == '__main__':  
     #SELECT * FROM shares_dat.`000001` ORDER BY id DESC limit 3000; #降序查寻某个数据的前3000项
     mysqltool = MySqlTool.MySqlTool()
-    selectobj = SharesSelectObj(mysqltool)
+    selectfqobj = SharesFQSelectObj(mysqltool)
+    selectfqobj.getShareFQDatFromNet('000001')
     print '测试程序运行结束'
 
 #创建用于保存数据分析表

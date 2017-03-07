@@ -372,7 +372,7 @@ class SharesSelectObj():
         return tmpdats
 
     #获取数组中数值最小点位置
-    def getMinPrice(self,dats,tcount):
+    def getMinPrice(self,dats,tcount = 0):
         count = len(dats)
         dattmps = []
         zoredats = []                   #数值为0的所有数据编号
@@ -384,12 +384,20 @@ class SharesSelectObj():
                 zoredats.append(d)
         if not dattmps:
             return []
-        maxdat = max(self.nowHighPrices[-tcount:])      #取当所有数据的最大值
-        mindat = 10000
-        #取所有数据的最小值
-        for dm in self.nowLowPrices[-tcount:]:
-            if dm < mindat:
-                mindat = dm
+        if tcount == 0:
+            maxdat = max(self.nowHighPrices)      #取当所有数据的最大值
+            mindat = 10000
+            #取所有数据的最小值
+            for dm in self.nowLowPrices:
+                if dm < mindat:
+                    mindat = dm
+        else:
+            maxdat = max(self.nowHighPrices[-tcount:])      #取当所有数据的最大值
+            mindat = 10000
+            #取所有数据的最小值
+            for dm in self.nowLowPrices[-tcount:]:
+                if dm < mindat:
+                    mindat = dm
 
         xielv = []
         if maxdat == mindat:

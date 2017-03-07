@@ -162,7 +162,9 @@ class SharesFQSelectObj():
             #{"symbol":"002095","closes":[62.8,60.0,66.0,175.69],"times":["20061215","20061218","20170303"],"name":"\u751f \u610f \u5b9d"}
             dicdat = json.loads(datatmp)
             # outdic[codeid] = dicdat.values()[0]
-            dotx = self.todayPrice / dicdat['closes'][-1]
+            dotx = 1.0
+            if self.todayPrice != 0:
+                dotx = self.todayPrice / dicdat['closes'][-1]
             self.nowPrices = []
             print dicdat['closes'][-1]
             print self.todayPrice
@@ -197,7 +199,11 @@ class SharesFQSelectObj():
         # self.todayPrice = dattmps[-1]
         #数据取向后的3平均值以取掉杂波
         avedats = dattmps #self.getAvDatas(dattmps, 2)           #将数据2天取一个平均值,得到一个数的数组
+        print avedats
         xielvs3000 = self.getMinPrice(avedats)
+        if not xielvs3000:
+            print 'xielvs3000 empty'
+            return
         self.today3000s[self.nowTID] = xielvs3000[-1]
         if self.count3000 >= 1000:
             xielvs1000 = self.getMinPrice(avedats[-1000:])
@@ -437,7 +443,7 @@ if __name__ == '__main__':
     #SELECT * FROM shares_dat.`000001` ORDER BY id DESC limit 3000; #降序查寻某个数据的前3000项
     mysqltool = MySqlTool.MySqlTool()
     selectfqobj = SharesFQSelectObj(mysqltool)
-    selectfqobj.getShareFQDatFromNet('000001')
+    selectfqobj.analyOneShares('300490')
     print '测试程序运行结束'
 
 #创建用于保存数据分析表

@@ -173,10 +173,19 @@ class SharesSelectObj():
             self.nowHighPrices.append(d[5])             #最高价组
             self.nowLowPrices.append(d[6])              #最低价组
         self.nowPrices = dattmps
-        self.todayPrice = dattmps[-1]
+        totmps = []
+        for x in dattmps:
+            if x != 0:
+                totmps.append(x)
+        if totmps:
+            self.todayPrice = totmps[-1]
+        else:
+            self.todayPrice = 0
         #数据取向后的3平均值以取掉杂波
         avedats = self.getAvDatas(dattmps, 3)           #将数据3天取一个平均值,得到一个数的数组
         xielvs3000 = self.getMinPrice(avedats,0)
+        if not xielvs3000:
+            return
         self.today3000s[self.nowTID] = xielvs3000[-1]
         if self.count3000 >= 1000:
             xielvs1000 = self.getMinPrice(avedats[-1000:],1000)

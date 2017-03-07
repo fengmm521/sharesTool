@@ -34,7 +34,7 @@ class SharesSelectObj():
         self.mailtool = mailTool.MyEmail()
 
         #复权数据工具
-        self.fqObjTool = fuquanSharesLow.SharesFQSelectObj(self.mailtool)
+        self.fqObjTool = fuquanSharesLow.SharesFQSelectObj(mysqltool)
 
         #将要保存到数据库的最终结果
         self.count3000 = 0
@@ -176,7 +176,7 @@ class SharesSelectObj():
         self.todayPrice = dattmps[-1]
         #数据取向后的3平均值以取掉杂波
         avedats = self.getAvDatas(dattmps, 3)           #将数据3天取一个平均值,得到一个数的数组
-        xielvs3000 = self.getMinPrice(avedats)
+        xielvs3000 = self.getMinPrice(avedats,0)
         self.today3000s[self.nowTID] = xielvs3000[-1]
         if self.count3000 >= 1000:
             xielvs1000 = self.getMinPrice(avedats[-1000:],1000)
@@ -320,7 +320,7 @@ class SharesSelectObj():
         datatmps.append(self.today150s[tid][5]);    #maxp150
         datatmps.append(self.today150s[tid][6]);    #minp150
         datatmps.append(self.today150s[tid][4]);    #between150
-        print self.lastUpdate
+        # print self.lastUpdate
         backsql = self.sqltool.updateOneShareAnalyseDataToSql(tid, self.lastUpdate, datatmps)
         if backsql > 100:
             print '更新股票%s分析数据到数据库出错%d'%(tid,backsql)
@@ -345,21 +345,14 @@ class SharesSelectObj():
     def getAvDatas(self,dats,day):
         count = len(dats)
         tmpdats = []
-        tmpmin = 10000.0
-        tmpmax = 0.0
         for n in range(count):
             tmpd = 0.0
-            if dats[n] > 0:
-                if dats[n] < tmpmin:
-                    tmpmin = dats[n]
-                if dats[n] > tmpmax:
-                    tmpmax = dats[n]
             if n <= count - day:
                 tmpd = self.average(dats[n:n+day])
             else:
                 tmpd = self.average(dats[n:])
             tmpdats.append(tmpd)
-        return tmpdats,tmpmin,tmpmax
+        return tmpdats
 
     #数据平均法去杂波,取近day天数据的平均值作为当天的值，不完整数据在前边,目前默认设置为3天数据取平均值
     def getAvDatasFront(self,dats,day):
@@ -372,7 +365,7 @@ class SharesSelectObj():
         return tmpdats
 
     #获取数组中数值最小点位置
-    def getMinPrice(self,dats,tcount = 0):
+    def getMinPrice(self,dats,tcount):
         count = len(dats)
         dattmps = []
         zoredats = []                   #数值为0的所有数据编号
@@ -403,7 +396,6 @@ class SharesSelectObj():
         if maxdat == mindat:
             return []
         outs = []
-        
         for n in range(len(dattmps)):
             if n > 0:
                 tmpd = dattmps[n] - dattmps[n-1]
@@ -427,6 +419,7 @@ if __name__ == '__main__':
     #SELECT * FROM shares_dat.`000001` ORDER BY id DESC limit 3000; #降序查寻某个数据的前3000项
     mysqltool = MySqlTool.MySqlTool()
     selectobj = SharesSelectObj(mysqltool)
+    #selectobj.getLastDatFromSql()
     print '测试程序运行结束'
 
 #创建用于保存数据分析表

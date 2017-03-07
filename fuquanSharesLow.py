@@ -150,6 +150,7 @@ class SharesFQSelectObj():
     def getShareFQDatFromNet(self,tid):
         #后复权数据下载接口
         #http://img1.money.126.net/data/hs/klinederc/day/times/1002095.json
+        self.nowTID = tid
         try:  
             cid = self.getNetIDWithID(tid)
             urlstr = "http://img1.money.126.net/data/hs/klinederc/day/times/%s.json"%(cid)
@@ -161,10 +162,15 @@ class SharesFQSelectObj():
             #{"symbol":"002095","closes":[62.8,60.0,66.0,175.69],"times":["20061215","20061218","20170303"],"name":"\u751f \u610f \u5b9d"}
             dicdat = json.loads(datatmp)
             # outdic[codeid] = dicdat.values()[0]
-            print len(dicdat['closes'])
-            print len(dicdat['times'])
-            self.nowPrices = dicdat['closes']
-            self.nowPrices.append(self.todayPrice)
+            dotx = self.todayPrice / dicdat['closes'][-1]
+            self.nowPrices = []
+            print dicdat['closes'][-1]
+            print self.todayPrice
+            for d in dicdat['closes']:
+                tmpd = d * dotx
+                self.nowPrices.append(tmpd)
+            # self.nowPrices = dicdat['closes']
+            # self.nowPrices.append(self.todayPrice)
             self.sharesStartDate = dicdat['times'][0]
             self.sharesDataEndDay = dicdat['times'][-1]
         except urllib2.URLError, e:  
@@ -276,18 +282,18 @@ class SharesFQSelectObj():
 
         #self.initConf()    #通过文件初始化分类参数,目前没有运行
         self.selOutDic = {}
-        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.01,0.01)
-        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.01,0.01)
-        self.selOutDic[600] = self.findItemWithDat(ls600,0.01,0.01)
-        self.selOutDic[300] = self.findItemWithDat(ls300,0.01,0.01)
-        self.selOutDic[150] = self.findItemWithDat(ls150,0.01,0.01)
+        self.selOutDic[3000] = self.findItemWithDat(ls3000)
+        self.selOutDic[1000] = self.findItemWithDat(ls1000)
+        self.selOutDic[600] = self.findItemWithDat(ls600)
+        self.selOutDic[300] = self.findItemWithDat(ls300)
+        self.selOutDic[150] = self.findItemWithDat(ls150)
         self.saveAllAnalyseResultToSql()
     #保存当天分析结果的推荐股票数据存入数据库
     def saveAllAnalyseResultToSql(self):
         self.sqltool.saveTodayFQAnalyseShareToSql(self.lastUpdate, self.selOutDic)
 
-    #找出想要的数据
-    def findItemWithDat(self,datas,maxDate = 0.02,minPrice = 0.05):
+    #找出想要的数据,只取10支当前价格最低的10支股票
+    def findItemWithDat(self,datas):
         #日期排序
         # datelist = list(datas)
         # datelist.sort(key=lambda x:x[1])  #从小到大
@@ -298,11 +304,20 @@ class SharesFQSelectObj():
         #价格排序
         pricelist = list(datas)
         pricelist.sort(key=lambda x:x[2]) 
+        dotp = 10000.0
+        co = 0
+        for p in range(len(pricelist)):
+            tmp = pricelist[p]
+            if tmp[5] <= 3:
+                co += 1
+            if co > 9:
+                dotp = pricelist[p]
+                break
+
         priceListtmp = []
         for mind in pricelist:
-            if mind[1] <= maxDate and mind[2] <= minPrice:
-                if mind[5] <= 5:            #只取最近5天满足要求的股票
-                    priceListtmp.append(mind)
+            if mind[2] <= dotp and mind[5] <= 3:
+                priceListtmp.append(mind)
         return priceListtmp
 
     #保存分析的一支股票今天数据存入数据存

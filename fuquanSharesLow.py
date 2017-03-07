@@ -199,7 +199,6 @@ class SharesFQSelectObj():
         # self.todayPrice = dattmps[-1]
         #数据取向后的3平均值以取掉杂波
         avedats = dattmps #self.getAvDatas(dattmps, 2)           #将数据2天取一个平均值,得到一个数的数组
-        print avedats
         xielvs3000 = self.getMinPrice(avedats)
         if not xielvs3000:
             print 'xielvs3000 empty'
@@ -356,7 +355,6 @@ class SharesFQSelectObj():
         datatmps.append(self.today150s[tid][5]);    #maxp150
         datatmps.append(self.today150s[tid][6]);    #minp150
         datatmps.append(self.today150s[tid][4]);    #between150
-        print self.lastUpdate
         backsql = self.sqltool.updateOneShareAnalyseFQDataToSql(tid, self.lastUpdate, datatmps)
         if backsql > 100:
             print '更新股票%s分析数据到数据库出错%d'%(tid,backsql)

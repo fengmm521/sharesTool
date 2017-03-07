@@ -89,10 +89,10 @@ class SharesSelectObj():
             self.lastSelectDate = DateTool.conventStrDateToNumber(str(dat[0][1]))
             numLastUpdate = DateTool.conventStrDateToNumber(self.lastUpdate)
             nowhour = DateTool.getNowHour()
-            if numLastUpdate > self.lastSelectDate and self.lastUpdateHour < 18:
+            if numLastUpdate > self.lastSelectDate and self.lastUpdateHour < 16:
                 self.startTodayAnalyse()
             #当数据库数据日期等于今天日期,且上次更新时间在18点前,并且当前时间在18点后,分析数据
-            elif numLastUpdate == self.lastSelectDate and self.lastUpdateHour < 18 and nowhour >= 18:
+            elif numLastUpdate == self.lastSelectDate and self.lastUpdateHour < 16 and nowhour >= 16:
                 self.startTodayAnalyse()
 
         else:

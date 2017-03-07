@@ -86,7 +86,7 @@ class UpdataObj():
             print '查看是否有新数据'
             if todaynumdate > self.lastNetDate:     #如果网络数据为昨天以前数据,则直接下载,比如星期六和星期天直接下载上周数据
                 self.updateNetDataWithDate(self.lastUpdate,self.lastNetDate)
-            elif todaynumdate == self.lastNetDate and self.getNowHour() >= 18:  #如果网络数据为今天数据，则看当前时间是否在下午6点以后
+            elif todaynumdate == self.lastNetDate and self.getNowHour() >= 16:  #如果网络数据为今天数据，则看当前时间是否在下午6点以后
                 self.updateNetDataWithDate(self.lastUpdate,self.lastNetDate)
             else:
                 self.lastUpdateNetTime = todaynumdate

@@ -164,6 +164,7 @@ class SharesFQSelectObj():
             print len(dicdat['closes'])
             print len(dicdat['times'])
             self.nowPrices = dicdat['closes']
+            self.nowPrices.append(self.todayPrice)
             self.sharesStartDate = dicdat['times'][0]
             self.sharesDataEndDay = dicdat['times'][-1]
         except urllib2.URLError, e:  

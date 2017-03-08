@@ -107,19 +107,20 @@ class SharesFQSelectObj():
         sendtext = '-------前复权数据分析结果---------\n'
         sendtext += '复权3000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x3000 in self.selOutDic[3000]:
-            sendtext += self.getStringForMail(x3000) + '\n\n'
-        sendtext += '复权1000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x3000) + '\n'
+        sendtext += '\n复权1000日推存:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x1000 in self.selOutDic[1000]:
-            sendtext += self.getStringForMail(x1000) + '\n\n'
-        sendtext += '复权600日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x1000) + '\n'
+        sendtext += '\n复权600日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x600 in self.selOutDic[600]:
             sendtext += self.getStringForMail(x600) + '\n\n'
-        sendtext += '复权300日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+        sendtext += '\n复权300日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x300 in self.selOutDic[300]:
-            sendtext += self.getStringForMail(x300) + '\n\n'
-        sendtext += '复权150日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
+            sendtext += self.getStringForMail(x300) + '\n'
+        sendtext += '\n复权150日推荐:\n股票代码,时间比率,价格比率,低价日距,当前价,(历史最低,历史最高)\n'
         for x150 in self.selOutDic[150]:
-            sendtext += self.getStringForMail(x150) + '\n\n'
+            sendtext += self.getStringForMail(x150) + '\n'
+        sendtext += '\n-------------------------------\n'
         return sendtext
 
     # #开始分析数据
@@ -300,19 +301,19 @@ class SharesFQSelectObj():
         #价格排序
         pricelist = list(datas)
         pricelist.sort(key=lambda x:x[2]) 
-        dotp = 10000.0
-        co = 0
-        for p in range(len(pricelist)):
-            tmp = pricelist[p]
-            if tmp[5] <= 3:
-                co += 1
-            if co > 9:
-                dotp = pricelist[p]
-                break
+        # dotp = 10000.0
+        # co = 0
+        # for p in range(len(pricelist)):
+        #     tmp = pricelist[p]
+        #     if tmp[5] <= 3:
+        #         co += 1
+        #     if co > 9:
+        #         dotp = pricelist[p]
+        #         break
 
         priceListtmp = []
         for mind in pricelist:
-            if mind[2] < dotp and mind[5] <= 3:
+            if mind[2] < 0.1 and mind[5] < 3:
                 priceListtmp.append(mind)
         return priceListtmp
 

@@ -274,11 +274,11 @@ class SharesSelectObj():
 
         #self.initConf()    #通过文件初始化分类参数,目前没有运行
         self.selOutDic = {}
-        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.001,0.001)
-        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.001,0.001)
-        self.selOutDic[600] = self.findItemWithDat(ls600,0.001,0.001)
-        self.selOutDic[300] = self.findItemWithDat(ls300,0.001,0.001)
-        self.selOutDic[150] = self.findItemWithDat(ls150,0.001,0.001)
+        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.01,0.01)
+        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.01,0.01)
+        self.selOutDic[600] = self.findItemWithDat(ls600,0.01,0.01)
+        self.selOutDic[300] = self.findItemWithDat(ls300,0.01,0.01)
+        self.selOutDic[150] = self.findItemWithDat(ls150,0.01,0.01)
         self.saveAllAnalyseResultToSql()
     #保存当天分析结果的推荐股票数据存入数据库
     def saveAllAnalyseResultToSql(self):

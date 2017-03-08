@@ -187,6 +187,7 @@ class SharesSelectObj():
             self.todayPrice = 0
         #数据取向后的3平均值以取掉杂波
         avedats = self.getAvDatas(dattmps, 3)           #将数据3天取一个平均值,得到一个数的数组
+
         xielvs3000 = self.getMinPrice(avedats,0)
         if not xielvs3000:
             return
@@ -272,13 +273,14 @@ class SharesSelectObj():
         for idtmp in self.today150s.keys():
             ls150.append([idtmp] + self.today150s[idtmp])
 
+        print len(ls3000),len(ls1000),len(ls600),len(ls300),len(ls150)
         #self.initConf()    #通过文件初始化分类参数,目前没有运行
         self.selOutDic = {}
-        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.01,0.01)
-        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.01,0.01)
-        self.selOutDic[600] = self.findItemWithDat(ls600,0.01,0.01)
-        self.selOutDic[300] = self.findItemWithDat(ls300,0.01,0.01)
-        self.selOutDic[150] = self.findItemWithDat(ls150,0.01,0.01)
+        self.selOutDic[3000] = self.findItemWithDat(ls3000,0.02,0.01)
+        self.selOutDic[1000] = self.findItemWithDat(ls1000,0.02,0.01)
+        self.selOutDic[600] = self.findItemWithDat(ls600,0.02,0.01)
+        self.selOutDic[300] = self.findItemWithDat(ls300,0.02,0.01)
+        self.selOutDic[150] = self.findItemWithDat(ls150,0.02,0.01)
         self.saveAllAnalyseResultToSql()
     #保存当天分析结果的推荐股票数据存入数据库
     def saveAllAnalyseResultToSql(self):
@@ -409,6 +411,8 @@ class SharesSelectObj():
         if maxdat == mindat:
             return []
         outs = []
+        print zoredats
+        print 'datlen=%d'%(len(dats))
         for n in range(len(dattmps)):
             if n > 0:
                 tmpd = dattmps[n] - dattmps[n-1]
@@ -433,6 +437,7 @@ if __name__ == '__main__':
     mysqltool = MySqlTool.MySqlTool()
     selectobj = SharesSelectObj(mysqltool)
     #selectobj.getLastDatFromSql()
+    selectobj.analyOneShares('000001')
     print '测试程序运行结束'
 
 #创建用于保存数据分析表

@@ -154,7 +154,7 @@ class SharesFQSelectObj():
         try:  
             cid = self.getNetIDWithID(tid)
             urlstr = "http://img1.money.126.net/data/hs/klinederc/day/times/%s.json"%(cid)
-            print urlstr
+            # print urlstr
             req = urllib2.Request(urlstr)  
             # restr.add_header('Range', 'bytes=0-20')
             resque = urllib2.urlopen(req) 
@@ -166,8 +166,6 @@ class SharesFQSelectObj():
             if self.todayPrice != 0:
                 dotx = self.todayPrice / dicdat['closes'][-1]
             self.nowPrices = []
-            print dicdat['closes'][-1]
-            print self.todayPrice
             for d in dicdat['closes']:
                 tmpd = d * dotx
                 self.nowPrices.append(tmpd)
@@ -177,21 +175,14 @@ class SharesFQSelectObj():
             self.sharesDataEndDay = dicdat['times'][-1]
         except urllib2.URLError, e:  
             if isinstance(e.reason, socket.timeout):  
+                print '获取数据错误:getShareFQDatFromNet1'
                 raise MyException("There was an error: %r" % e)  
+
             else:  
+                print '获取数据错误:getShareFQDatFromNet2'
                 # reraise the original error  
                 raise
-
-
-        # datback = self.sqltool.getTabDataWithIDAndCount(tid, tcount)
-        # self.nowDat = []
-        # if datback:
-        #   for  t in datback:
-        #       self.nowDat.append(list(t))
-        #   self.nowDat.reverse()
-        #   self.nowTID = tid
-        # else:
-        #   print '获取%s数据%d日错误'%(tid,tcount)
+                
     #分析数据,得出分析结果并保存
     def analyseShareDat(self):
         dattmps = self.nowPrices
@@ -321,7 +312,7 @@ class SharesFQSelectObj():
 
         priceListtmp = []
         for mind in pricelist:
-            if mind[2] <= dotp and mind[5] <= 3:
+            if mind[2] < dotp and mind[5] <= 3:
                 priceListtmp.append(mind)
         return priceListtmp
 
@@ -358,8 +349,8 @@ class SharesFQSelectObj():
         backsql = self.sqltool.updateOneShareAnalyseFQDataToSql(tid, self.lastUpdate, datatmps)
         if backsql > 100:
             print '更新股票%s分析数据到数据库出错%d'%(tid,backsql)
-        else:
-            print '更新分析%s数据到数据库完成'%(tid)
+        # else:
+            #print '更新分析%s数据到数据库完成'%(tid)
     
 
 

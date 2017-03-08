@@ -131,14 +131,18 @@ class SharesSelectObj():
     def startTodayAnalyse(self):
         self.lastUpdate = DateTool.getNowStrDate()
         self.fqObjTool.lastUpdate = self.lastUpdate
+        countx = 0
         for d in self.allIDs:
+            countx += 1
+            print '分析:%s,count=%d'%(d,countx)
             self.analyOneShares(d)
             self.fqObjTool.setTodayPrice(self.todayPrice)   #分析前复权数据
             self.fqObjTool.analyOneShares(d)
-            time.sleep(0.001)
+            time.sleep(0.01)
         self.getAllRecommendDat()
         self.fqObjTool.getAllRecommendDat()                 #整理前复权数据分析结果
-        self.sendEmailToUser()
+        emailout = self.fqObjTool.getEmailWithFQDataStr()
+        self.sendEmailToUser(emailout)
         self.lastUpdateHour = DateTool.getNowHour()
     def analyOneShares(self,tid):
         if self.lastUpdate == '':
@@ -333,8 +337,8 @@ class SharesSelectObj():
         backsql = self.sqltool.updateOneShareAnalyseDataToSql(tid, self.lastUpdate, datatmps)
         if backsql > 100:
             print '更新股票%s分析数据到数据库出错%d'%(tid,backsql)
-        else:
-            print '更新分析%s数据到数据库完成'%(tid)
+        # else:
+        #     print '更新分析%s数据到数据库完成'%(tid)
     
 
 
@@ -386,16 +390,16 @@ class SharesSelectObj():
                 zoredats.append(d)
         if not dattmps:
             return []
+        maxdat = 0
+        mindat = 10000
         if tcount == 0:
             maxdat = max(self.nowHighPrices)      #取当所有数据的最大值
-            mindat = 10000
             #取所有数据的最小值
             for dm in self.nowLowPrices:
                 if dm < mindat:
                     mindat = dm
         else:
             maxdat = max(self.nowHighPrices[-tcount:])      #取当所有数据的最大值
-            mindat = 10000
             #取所有数据的最小值
             for dm in self.nowLowPrices[-tcount:]:
                 if dm < mindat:
